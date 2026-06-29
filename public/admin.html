@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UBIO — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <div class="brand">UB<span>IO</span> · Admin</div>
+      <button class="btn-ghost" id="logout" type="button" style="display:none">Sign out</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Login -->
+    <section class="block" id="login-view" style="border-top:none">
+      <h2>Sign in</h2>
+      <p class="sub">Enter the administrator password.</p>
+      <div id="login-notice"></div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" />
+      </div>
+      <button class="btn-primary" id="login-btn" type="button">Sign in</button>
+    </section>
+
+    <!-- Dashboard -->
+    <div id="dash-view" class="admin-grid" style="display:none; padding: 32px 0;">
+      <section>
+        <h2>Pending applications</h2>
+        <p class="sub">Approve only after you've verified the person's identity.</p>
+        <div id="applications"></div>
+      </section>
+
+      <section>
+        <h2>Current payees</h2>
+        <div class="toolbar">
+          <button class="btn-ghost" id="add-payee-toggle" type="button">+ Add payee directly</button>
+          <button class="btn-primary" id="distribute" type="button">Distribute now</button>
+        </div>
+        <div id="add-payee-form" style="display:none; margin: 8px 0 16px;">
+          <div class="field"><label>Full name</label><input id="ap-name" type="text" /></div>
+          <div class="field"><label>Email</label><input id="ap-email" type="email" /></div>
+          <div class="field"><label>BTC address</label><input id="ap-addr" class="mono" type="text" /></div>
+          <button class="btn-primary" id="ap-save" type="button">Save payee</button>
+        </div>
+        <div id="dash-notice"></div>
+        <div id="payees"></div>
+      </section>
+
+      <section>
+        <h2>Payment history</h2>
+        <div id="payments"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="wrap"><a href="/">← Back to public page</a></footer>
+  <script src="/admin.js"></script>
+</body>
+</html>

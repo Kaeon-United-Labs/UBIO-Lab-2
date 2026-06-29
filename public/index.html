@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UBIO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <div class="brand" id="brand">UB<span>IO</span></div>
+      <div class="net-badge" id="net">—</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">Grassroots basic income</p>
+      <h1 id="headline">A shared pot, split evenly.</h1>
+      <p class="lede">
+        Every contribution joins one pool. On each cycle, the entire balance is
+        divided equally among all verified recipients — no overhead skimmed, the
+        same amount to each person.
+      </p>
+
+      <div class="pot" aria-live="polite">
+        <div>
+          <div class="label">Current pool balance</div>
+          <div class="figure">
+            <span class="amount" id="balance">—</span>
+            <span class="unit" id="balance-unit"></span>
+          </div>
+        </div>
+        <div class="address-row">
+          <code class="address" id="address">loading…</code>
+          <button class="btn-ghost" id="copy" type="button">Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>Apply to receive</h2>
+      <p class="sub">
+        Applications are reviewed by hand — a person verifies each identity
+        before anyone is added. You'll hear back by email.
+      </p>
+
+      <div id="form-notice"></div>
+
+      <div class="field">
+        <label for="fullName">Full name</label>
+        <input id="fullName" type="text" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="btcAddress">Your Bitcoin address</label>
+        <input id="btcAddress" class="mono" type="text" spellcheck="false" />
+        <span class="hint">Where your share is sent. Double-check it — payments can't be reversed.</span>
+      </div>
+      <div class="field">
+        <label for="note">Note <span class="hint">(optional)</span></label>
+        <textarea id="note" maxlength="2000"></textarea>
+      </div>
+      <button class="btn-primary" id="submit" type="button">Submit application</button>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    Running on <span id="net-foot">—</span>. Administrators: <a href="/admin.html">sign in</a>.
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
