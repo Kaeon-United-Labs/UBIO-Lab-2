@@ -1,6 +1,35 @@
 'use strict';
 
-const { MongoClient } = require('mongodb');
+/**
+ * db.js — schema init and connection, shared by every mode/rail combination.
+ *
+ * Collections:
+ *   groups        one document per institution. In single-institution mode
+ *                 there is exactly one, auto-created at boot (see
+ *                 services/groups.js#ensureSingletonGroup). In federated
+ *                 mode, anyone can create one via the API.
+ *   group_meta    scheduler/ledger state per group: lock fields (both rails),
+ *                 lastDistribution (both rails), payoutIndex + balanceCents
+ *                 (usd rails only — bitcoin's "balance" is read live from
+ *                 the chain, so it isn't tracked here).
+ *   recipients    people who receive payouts. Called "payees" in the
+ *                 bitcoin/single-mode UI and "subscribers" in the usd/
+ *                 federated-mode UI, per the source apps' own language, but
+ *                 they're one collection with rail-appropriate fields.
+ *   applications  pending recipient applications (single mode only — an
+ *                 institution manually verifies identity before admitting
+ *                 someone; federated mode instead has direct self-service
+ *                 enrollment, per Lab/2, with no approval queue).
+ *   donations     incoming donation records (usd rails only — bitcoin
+ *                 donations are on-chain and need no local record).
+ *   payments      outgoing payout records, one per bitcoin distribution
+ *                 cycle or per usd transfer attempt.
+ *   recipient_auth  a bcrypt-hashed login password per recipient, so a
+ *                 recipient can authenticate as themselves (the "logged-in
+ *                 user" API tier), separate from admin and anonymous access.
+ */
+
+const { MongoClient, ObjectId } = require('mongodb');
 const config = require('./config');
 
 let client;
@@ -10,37 +39,47 @@ const collections = {};
 
 async function connect() {
   if (db) return db;
-  client = new MongoClient(config.mongoUri);
+  client = new MongoClient(config.mongoUri, { ignoreUndefined: true });
   await client.connect();
   db = client.db(config.dbName);
 
-  // "Any requisite contents of the Mongo database not found on execution shall
-  // be created dynamically." Collections are created lazily by Mongo on first
-  // write, but we ensure indexes and the singleton meta doc up front.
-  collections.payees = db.collection('payees');
+  collections.groups = db.collection('groups');
+  collections.group_meta = db.collection('group_meta');
+  collections.recipients = db.collection('recipients');
   collections.applications = db.collection('applications');
+  collections.donations = db.collection('donations');
   collections.payments = db.collection('payments');
-  collections.meta = db.collection('meta');
+  collections.recipient_auth = db.collection('recipient_auth');
 
-  await collections.payees.createIndex({ email: 1 }, { unique: true });
-  await collections.applications.createIndex({ createdAt: 1 });
-  // Idempotency: at most one payment record per distribution cycle.
-  await collections.payments.createIndex({ cycleId: 1 }, { unique: true });
-
-  await collections.meta.updateOne(
-    { _id: 'scheduler' },
-    {
-      $setOnInsert: {
-        _id: 'scheduler',
-        lastDistribution: null, // set on first run; first payout is next cycle
-        locked: false,
-        lockedAt: null,
-      },
-    },
-    { upsert: true }
-  );
-
+  await ensureIndexes();
   return db;
+}
+
+async function ensureIndexes() {
+  await collections.groups.createIndex({ slug: 1 }, { unique: true });
+  await collections.group_meta.createIndex({ groupId: 1 }, { unique: true });
+  // Duplicate identity is rejected *within a group* — the same email or
+  // phone may belong to a recipient of more than one institution.
+  await collections.recipients.createIndex({ groupId: 1, email: 1 }, { unique: true });
+  await collections.recipients.createIndex(
+    { groupId: 1, phone: 1 },
+    { unique: true, partialFilterExpression: { phone: { $exists: true, $type: 'string' } } }
+  );
+  await collections.applications.createIndex({ groupId: 1, createdAt: 1 });
+  await collections.donations.createIndex({ groupId: 1, createdAt: -1 });
+  await collections.donations.createIndex({ providerRef: 1 });
+  await collections.payments.createIndex({ groupId: 1, createdAt: -1 });
+  // Idempotency for the bitcoin engine: at most one payment doc per
+  // (group, cycleId).
+  await collections.payments.createIndex(
+    { groupId: 1, cycleId: 1 },
+    { unique: true, partialFilterExpression: { cycleId: { $exists: true } } }
+  );
+  await collections.recipient_auth.createIndex({ recipientId: 1 }, { unique: true });
+}
+
+function oid(id) {
+  return typeof id === 'string' ? new ObjectId(id) : id;
 }
 
 function getCollections() {
@@ -54,4 +93,14 @@ async function close() {
   db = undefined;
 }
 
-module.exports = { connect, getCollections, close };
+/**
+ * Test-only seam: installs in-memory fake collections without a real Mongo
+ * connection, so services can be unit-tested against the real business
+ * logic. See test/support/fakeCollections.js.
+ */
+function _testConnect(fakeCollections) {
+  db = {}; // truthy sentinel — getCollections() just checks this is set
+  Object.assign(collections, fakeCollections);
+}
+
+module.exports = { connect, close, getCollections, oid, ObjectId, _testConnect };

@@ -1,8 +1,19 @@
 'use strict';
 
-const config = require('../config');
+/**
+ * Thin wrapper around an Esplora-compatible REST API (Blockstream by
+ * default). Ported from Stage/UBIO's src/wallet/esplora.js, unchanged except
+ * that the base URL is passed in rather than read from a single global
+ * config — federated mode has one Esplora base URL but many wallets.
+ */
 
-const BASE = config.esploraBaseUrl.replace(/\/$/, '');
+const config = require('../../config');
+
+// This whole module is only meaningfully used on the bitcoin rail, but it's
+// required unconditionally by wallet.js (loaded regardless of rail so
+// services/groups.js can reference walletFor/keygen without branching at
+// require-time) — so this must not throw when config.btc is undefined.
+const BASE = config.isBitcoin ? config.btc.esploraBaseUrl.replace(/\/$/, '') : null;
 
 async function get(path) {
   const res = await fetch(`${BASE}${path}`);
@@ -13,7 +24,7 @@ async function get(path) {
   return res;
 }
 
-// Confirmed UTXOs only — we don't spend unconfirmed donations.
+// Confirmed UTXOs only — never spend unconfirmed donations.
 async function getSpendableUtxos(address) {
   const res = await get(`/address/${address}/utxo`);
   const utxos = await res.json();
@@ -22,8 +33,8 @@ async function getSpendableUtxos(address) {
     .map((u) => ({ txid: u.txid, vout: u.vout, value: u.value }));
 }
 
-// sat/vByte. Esplora returns a map of {targetBlocks: feeRate}. We aim for ~3
-// blocks and floor at 1 to stay above the relay minimum.
+// sat/vByte. Esplora returns {targetBlocks: feeRate}; aim for ~3 blocks,
+// floor at 1 to stay above the relay minimum.
 async function getFeeRateSatPerVByte() {
   const res = await get('/fee-estimates');
   const est = await res.json();

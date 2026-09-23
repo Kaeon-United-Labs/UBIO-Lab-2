@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const { planDistribution, estimateFeeSats } = require('../src/services/distribution-math');
+const { planDistribution, estimateFeeSats } = require('../src/services/distribution-btc-math');
 
 let passed = 0;
 function test(name, fn) {

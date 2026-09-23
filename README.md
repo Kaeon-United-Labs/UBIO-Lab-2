@@ -1,8 +1,49 @@
 # UBIO
 
-A web service template for an institution to run a grassroots **U**niversal **B**asic **I**ncome program over Bitcoin. Donations accumulate in one wallet; on a fixed interval the entire balance is split evenly among manually-verified recipients.
+UBIO is a self-hosted web service that lets a community — a mutual aid group, a library, a credit union, a neighborhood collective — turn donations into a recurring, evenly-split basic income for a group of people it has vetted.
 
-Node.js + Express + MongoDB, with a build-free vanilla UI.
+The idea is simple: money comes in from donors, it collects in one pool, and on a regular schedule the whole pool is divided **equally** among everyone currently on the recipient list. No means-testing beyond who's on the list, no favoritism in the split — everyone gets the same share every cycle.
+
+How money comes in, and who's allowed to run their own pool on the same install, are both configurable without touching any code — just environment variables.
+
+---
+
+## The two choices you make when you deploy this
+
+### 1. How donations and payouts move: `PAYMENT_RAIL`
+
+| Value | Currency | How donors give | How recipients get paid |
+|---|---|---|---|
+| `bitcoin` | BTC | Send Bitcoin to a public wallet address shown on the page | Sent on-chain, directly to each recipient's own address |
+| `stripe` | USD | Credit/debit card, processed by Stripe | Deposited via Stripe Connect (bank account or debit card) |
+| `paypal` | USD | PayPal checkout | Sent via PayPal Payouts, straight to a PayPal email |
+
+### 2. Who this install serves: `PLATFORM_MODE`
+
+| Value | What it means |
+|---|---|
+| `single` | This deployment runs **one** basic income program, for one institution. There's one admin password, one recipient list, one pool. |
+| `federated` | This deployment is a **shared platform** — anyone can show up and create their own group with its own admin, its own recipients, and its own pool, all running side by side on the same install. |
+
+These two choices are independent, so there are six ways to combine them — for example, one credit union running a single BTC-funded program, or a shared platform where any local nonprofit can spin up its own PayPal-funded group. Whichever combination you pick, the app behaves consistently: the same kind of application/enrollment flow, the same kind of payout schedule, and the same API.
+
+---
+
+## How admission works
+
+- **Single mode**: someone applies with their name, email, and a note (plus a Bitcoin address, if that's the rail). An admin reviews and manually approves them — the idea being a person verifies each applicant's identity before they're added to the pool. This keeps out fake applicants without requiring any automated ID verification.
+- **Federated mode**: each group's admin has already agreed to run a program for people they know, so subscribing is instant — no approval queue. An admin can also add someone directly at any time, in either mode.
+
+## How payouts work
+
+- **Bitcoin**: on a fixed interval (7 days by default), the *entire* wallet balance is split, fee-aware, among every current recipient. If splitting would give anyone less than a few hundred satoshis (the minimum a Bitcoin transaction can usefully send), the whole cycle is skipped and the funds simply roll into the next one — no partial, unequal payout is ever sent. Any leftover satoshi that can't split evenly is handed out one at a time, so the biggest possible difference between two recipients in the same cycle is a single satoshi.
+- **Stripe / PayPal**: on a short interval (60 seconds by default, since USD balances can be checked continuously rather than read off a blockchain), the app pays out a set dollar amount per recipient — at most half of what the pool can currently afford, so the pool is never drained in one pass and it can keep paying people even if donations slow down. Recipients are paid in rotating order, so nobody is skipped indefinitely.
+
+## Getting paid, per rail
+
+- **Bitcoin**: recipients just give an address when they apply — that's all that's needed, no further setup.
+- **Stripe**: after being admitted, a recipient gets an onboarding link to connect a bank account or debit card. They aren't paid until that's finished.
+- **PayPal**: a recipient just needs a PayPal email — there's no separate setup step, they're ready to be paid as soon as they're admitted.
 
 ---
 
@@ -10,76 +51,90 @@ Node.js + Express + MongoDB, with a build-free vanilla UI.
 
 ```bash
 npm install
-cp .env.example .env      # then fill in the blanks
-npm test                  # runs the distribution-math tests (no DB/network needed)
+cp .env.example .env      # choose PAYMENT_RAIL and PLATFORM_MODE, fill in the rest
+npm test                  # runs the payout-math tests — no database or network needed
 npm start
 ```
 
-Visit the root URL for the public page and `/admin.html` to sign in.
+You'll need a reachable MongoDB no matter which rail you pick. If you're using Bitcoin, you'll also need a **testnet** wallet — get free test coins from a faucet, and never point this at real funds (mainnet) while you're still evaluating it. If you're using Stripe or PayPal, both start in **mock mode** by default: no account or API keys are needed to try the whole flow — donations confirm instantly and payouts are logged to the console instead of moving real money.
 
-You need a reachable MongoDB and a funded **testnet** wallet to see a real payout. Get testnet coins from a faucet; never start on mainnet while evaluating.
+Six example configurations:
 
----
+```env
+# One institution, running on Bitcoin
+PAYMENT_RAIL=bitcoin
+PLATFORM_MODE=single
 
-## How it works
+# A shared platform where any group can sign up, funded by cards
+PAYMENT_RAIL=stripe
+PLATFORM_MODE=federated
 
-- **Donations** go to a single wallet whose address is shown publicly.
-- **Applicants** submit name, email, BTC address, and an optional note. An admin verifies identity out-of-band and approves them into the payee list (duplicate emails rejected).
-- **The admin panel** lives behind a password login. Every action is also reachable as an HTTP request using the admin password as a `Bearer` token.
-- **Distribution** runs on an interval. A server-side scheduler compares the current time to the last-distribution timestamp in the database; when a full interval has elapsed, the whole pool is paid out. No timestamp yet → it's seeded on first run and the first payout happens the following cycle. No payees or insufficient funds → no payment.
+# One institution, taking card donations
+PAYMENT_RAIL=stripe
+PLATFORM_MODE=single
 
----
+# One institution, taking PayPal donations
+PAYMENT_RAIL=paypal
+PLATFORM_MODE=single
 
-## Implementation Details
+# A shared platform funded by PayPal
+PAYMENT_RAIL=paypal
+PLATFORM_MODE=federated
 
-**Bitcoin backend.** All chain access (UTXOs, fee rate, broadcast) goes through one swappable module (`src/wallet/esplora.js`) targeting the Esplora REST API (Blockstream by default). Signing happens only in `src/wallet/index.js`. Replace either without touching the rest of the app.
+# A shared platform running on Bitcoin (each group gets its own wallet, minted automatically)
+PAYMENT_RAIL=bitcoin
+PLATFORM_MODE=federated
+```
 
-**"All the money, evenly" — reconciled with Bitcoin's actual rules** (`src/services/distribution-math.js`):
-- *Fees:* the fee is estimated and subtracted before splitting; "insufficient funds" is fee-aware.
-- *Dust:* if each share would fall below the 546-sat dust limit, the cycle is skipped entirely (paying a partial round would violate "equally"). Funds stay on-chain and roll into the next cycle automatically.
-- *Remainder:* an amount rarely divides evenly into N integer-satoshi shares. The leftover (always < N sats) is handed out one sat at a time to the first few payees, so the maximum inequality between any two recipients is a single satoshi. Outputs are sized to consume the whole balance minus the fee, so nothing leaks to miners.
+`.env.example` documents every variable and which combination it applies to.
 
-**Exactly-once payout** (`src/services/distribution.js`):
-- *Single-fire lock:* the scheduler claims the run with one atomic conditional update on a singleton document, so multiple processes/restarts can't double-pay. Stale locks (from a crashed worker) are reclaimed after a timeout.
-- *Idempotent cycle record:* a unique index on `cycleId` means a cycle can be recorded — and therefore sent — at most once.
-- *Reconciliation:* if a crash lands between broadcast and database write, the next run asks the network whether that cycle's transaction actually went out before doing anything. True exactly-once across two independent systems (Bitcoin + Mongo) is impossible; this is an honest at-most-once with reconciliation, not a guarantee.
-- *Skip vs. error:* deliberate skips (no payees / insufficient / sub-dust) advance the clock so retries wait a full interval; transient send errors don't, so they retry promptly.
-
-**Auth.** Password compared in constant time; sessions use httpOnly, sameSite cookies distinct from the long-lived bearer token; login and the public form are rate-limited. The interval values, missing from the original env list, were added.
-
-**Config.** Testnet/mainnet is a single env switch — but mainnet refuses to boot unless you also set `I_UNDERSTAND_MAINNET_RISK=yes` (see below).
-
----
-
-## ⚠️ Warnings
-
-1. **Hot key on a public box.** The wallet private key sits in plaintext `.env` on the same server that runs the public donation form and admin panel.
-2. **Single static admin secret.** One password is both the login and a never-expiring bearer token.
-3. **HTTPS is mandatory.** in production (you're sending that token and applicant PII over the wire). Terminate TLS in front of this app and set `NODE_ENV=production` so session cookies are marked secure.
-4. **Further testing is pending.** The money-math is unit-tested and conserves to the satoshi, but the Mongo and Esplora integration paths haven't been exercised against a live network here. Test on testnet with small amounts and watch a full cycle before pushing to production.
-
-**Legal:** accepting donations and redistributing money — with manual "identity verification" — can implicate money-transmission, AML/KYC, data-protection (you're storing names + emails), and tax rules that vary by jurisdiction. Consult legal and financial professionals before running with actual funds.
+Once it's running: the home page is the public donation/application page (or, in federated mode, a directory of groups you can browse or create one of your own). `/admin.html` is the admin dashboard. `/me.html` is where an admitted recipient signs in to check their status and payment history.
 
 ---
 
-## Layout
+## Using it as an API, not just a website
+
+Everything the website can do, a script or another program can do too, over plain HTTP — the web pages are just one client of the same API. There are three separate kinds of credentials, so an admin, an admitted recipient, and an anonymous visitor each get exactly the access they should have and no more:
+
+1. **Admin** — manages a group: reviews applications or adds recipients directly, removes people, views payment history, and can trigger a payout cycle immediately instead of waiting for the schedule. Signs in with a password and can act either through a normal browser session or by sending that password (or a token obtained from it) as a bearer token on any request.
+2. **Logged-in recipient** — someone already admitted to a pool. The moment they're added, they're given a one-time login password (shown to whoever added them, so it can be passed along). They can sign in to see their own status and payment history, update their payout details, and set their own password.
+3. **Anonymous** — anyone else. Can see public information about a group (or the directory of groups, in federated mode), submit an application or subscription, and make a donation. Rate-limited to discourage abuse.
+
+---
+
+## Project layout
 
 ```
 src/
-  config.js              env loading + mainnet guard
-  db.js                  mongo connection + dynamic bootstrap
-  scheduler.js           interval tick
-  wallet/
-    index.js             facade + the only signing code
-    esplora.js           swappable chain backend
+  config.js          reads PAYMENT_RAIL and PLATFORM_MODE and validates every
+                      setting the resulting combination actually needs
+  db.js               MongoDB connection and schema
+  index.js             starts the server: connects the database, sets up the
+                       one institution (single mode) or the group directory
+                       (federated mode), and wires up the right routes
+  scheduler.js         runs the payout cycle on a timer
+  payments/
+    stripe.js            card donations + bank/card payouts, via Stripe
+    paypal.js             PayPal donations + PayPal payouts
+    bitcoin/               wallet signing, chain reads, and wallet generation
   services/
-    distribution-math.js pure split logic (unit-tested)
-    distribution.js      lock, idempotency, reconciliation, payout
-    payees.js            payee/application logic
-  routes/
-    public.js            info + application endpoints
-    admin.js             login, payee CRUD, review, history, bearer API
-  middleware/auth.js     constant-time auth + rate limiting
-public/                  vanilla HTML/CSS/JS UI
-test/                    distribution-math tests
+    groups.js              creating and looking up institutions/groups
+    recipients.js            applications, enrollment, and payout setup
+    recipientAuth.js          recipient login credentials
+    donations.js              recording USD donations and pool balances
+    distribution-btc.js       the Bitcoin payout engine
+    distribution-usd.js       the Stripe/PayPal payout engine
+  auth/                 the three credential tiers described above
+  routes/               the HTTP API, split by platform mode
+public/                the website (one shared set of pages that adapts to
+                       whichever rail and mode the server is running)
+test/                  automated tests for the payout math and configuration
 ```
+
+---
+
+## Things to know before you rely on this
+
+- **Mainnet is locked behind an explicit switch.** By default this only talks to Bitcoin's testnet. Pointing it at real Bitcoin (`BTC_NETWORK=mainnet`) requires also setting `I_UNDERSTAND_MAINNET_RISK=yes`, because the wallet's private key is stored in plaintext right next to the public web server — a real deployment needs a better custody story before holding real funds.
+- **This hasn't been tested against live payment processors or a live blockchain.** The payout math itself is covered by automated tests and is exact to the last cent or satoshi, but the actual network connections to MongoDB, Bitcoin's network, Stripe, and PayPal haven't been exercised end-to-end in this environment. Test thoroughly in mock/testnet mode, with small amounts, before using real money.
+- **This may have legal implications.** Collecting donations and redistributing them to specific people — even with identity checks — can trigger money-transmission, anti-money-laundering, data-privacy, and tax obligations that vary by location, and in federated mode, potentially by every group's own jurisdiction. Talk to a lawyer and an accountant before running this with real money.

@@ -17,8 +17,30 @@
     </div>
   </header>
 
-  <main class="wrap">
-    <section class="hero">
+  <main class="wrap" id="app">
+
+    <!-- Federated directory (shown only in federated mode, at "/") -->
+    <section class="hero" id="directory-view" hidden>
+      <p class="eyebrow">Grassroots basic income · federated</p>
+      <h1>Institutions on this platform.</h1>
+      <p class="lede">Each group below is its own pool, run by the institution that created it. Pick one to donate or apply, or start your own.</p>
+      <div class="directory-list" id="group-list"></div>
+    </section>
+
+    <section class="block" id="create-group-view" hidden>
+      <h2>Start a group</h2>
+      <p class="sub">You'll get an admin dashboard for your institution's own pool.</p>
+      <div id="create-group-notice"></div>
+      <div class="field"><label for="cg-name">Group name</label><input id="cg-name" type="text" /></div>
+      <div class="field"><label for="cg-slug">Address <span class="hint">(letters, numbers, hyphens — this becomes /g/your-address)</span></label><input id="cg-slug" class="mono" type="text" /></div>
+      <div class="field"><label for="cg-description">Description <span class="hint">(optional)</span></label><textarea id="cg-description"></textarea></div>
+      <div class="field" id="cg-round-field" hidden><label for="cg-round">Payout unit <span class="hint">(dollars per share, integer round threshold)</span></label><input id="cg-round" type="number" min="1" value="1" /></div>
+      <div class="field"><label for="cg-password">Admin password <span class="hint">(min 8 characters)</span></label><input id="cg-password" type="password" /></div>
+      <button class="btn-primary" id="cg-save" type="button">Create group</button>
+    </section>
+
+    <!-- Single-institution view (single mode), or one group's page (federated, "/g/:slug") -->
+    <section class="hero" id="group-view" hidden>
       <p class="eyebrow">Grassroots basic income</p>
       <h1 id="headline">A shared pot, split evenly.</h1>
       <p class="lede">
@@ -29,29 +51,45 @@
 
       <div class="pot" aria-live="polite">
         <div>
-          <div class="label">Current pool balance</div>
+          <div class="label" id="pot-label">Current pool balance</div>
           <div class="figure">
             <span class="amount" id="balance">—</span>
             <span class="unit" id="balance-unit"></span>
           </div>
         </div>
-        <div class="address-row">
+
+        <!-- bitcoin rail: show the address -->
+        <div class="address-row" id="address-row" hidden>
           <code class="address" id="address">loading…</code>
           <button class="btn-ghost" id="copy" type="button">Copy</button>
+        </div>
+
+        <!-- usd rails: a donate form -->
+        <div id="donate-row" hidden>
+          <div class="field-row">
+            <div class="field">
+              <label for="donate-amount">Donate (USD)</label>
+              <input id="donate-amount" type="number" min="1" step="1" value="10" />
+            </div>
+            <div class="field" style="flex:0; align-self:flex-end;">
+              <button class="btn-primary" id="donate-btn" type="button">Donate</button>
+            </div>
+          </div>
+          <div id="donate-notice"></div>
         </div>
       </div>
     </section>
 
-    <section class="block">
-      <h2>Apply to receive</h2>
-      <p class="sub">
+    <section class="block" id="apply-view" hidden>
+      <h2 id="apply-heading">Apply to receive</h2>
+      <p class="sub" id="apply-sub">
         Applications are reviewed by hand — a person verifies each identity
         before anyone is added. You'll hear back by email.
       </p>
 
       <div id="form-notice"></div>
 
-      <div class="field">
+      <div class="field" id="field-fullName">
         <label for="fullName">Full name</label>
         <input id="fullName" type="text" autocomplete="name" />
       </div>
@@ -59,7 +97,11 @@
         <label for="email">Email</label>
         <input id="email" type="email" autocomplete="email" />
       </div>
-      <div class="field">
+      <div class="field" id="field-phone" hidden>
+        <label for="phone">Phone</label>
+        <input id="phone" type="tel" autocomplete="tel" />
+      </div>
+      <div class="field" id="field-btcAddress" hidden>
         <label for="btcAddress">Your Bitcoin address</label>
         <input id="btcAddress" class="mono" type="text" spellcheck="false" />
         <span class="hint">Where your share is sent. Double-check it — payments can't be reversed.</span>
@@ -73,7 +115,9 @@
   </main>
 
   <footer class="wrap">
-    Running on <span id="net-foot">—</span>. Administrators: <a href="/admin.html">sign in</a>.
+    Running on <span id="net-foot">—</span>.
+    Administrators: <a href="/admin.html" id="admin-link">sign in</a>.
+    Recipients: <a href="/me.html" id="me-link">manage your account</a>.
   </footer>
 
   <script src="/app.js"></script>

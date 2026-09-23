@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UBIO — My account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <div class="brand">UB<span>IO</span> · My account</div>
+      <button class="btn-ghost" id="logout" type="button" style="display:none">Sign out</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="block" id="login-view" style="border-top:none">
+      <h2>Sign in</h2>
+      <p class="sub">Use the email and password you were given when you were admitted.</p>
+      <div id="login-notice"></div>
+      <div class="field-row">
+        <div class="field" id="slug-field" hidden>
+          <label for="slug">Group address</label>
+          <input id="slug" type="text" class="mono" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" />
+        </div>
+      </div>
+      <button class="btn-primary" id="login-btn" type="button">Sign in</button>
+    </section>
+
+    <div id="dash-view" style="display:none; padding: 32px 0;">
+      <section>
+        <h2>Your status</h2>
+        <div id="status"></div>
+      </section>
+
+      <section class="block">
+        <h2>Payment history</h2>
+        <div id="history"></div>
+      </section>
+
+      <section class="block">
+        <h2>Update details</h2>
+        <div id="update-notice"></div>
+        <div class="field" id="field-btcAddress" hidden>
+          <label for="u-btc">BTC address</label>
+          <input id="u-btc" class="mono" type="text" />
+        </div>
+        <div class="field" id="field-phone" hidden>
+          <label for="u-phone">Phone</label>
+          <input id="u-phone" type="tel" />
+        </div>
+        <div class="field">
+          <label for="u-note">Note</label>
+          <textarea id="u-note" maxlength="2000"></textarea>
+        </div>
+        <button class="btn-primary" id="save-details" type="button">Save</button>
+      </section>
+
+      <section class="block">
+        <h2>Change password</h2>
+        <div id="password-notice"></div>
+        <div class="field"><label for="cur-pw">Current password</label><input id="cur-pw" type="password" /></div>
+        <div class="field"><label for="new-pw">New password</label><input id="new-pw" type="password" /></div>
+        <button class="btn-primary" id="save-password" type="button">Change password</button>
+      </section>
+    </div>
+  </main>
+
+  <footer class="wrap"><a href="/">← Back to public page</a></footer>
+  <script src="/me.js"></script>
+</body>
+</html>

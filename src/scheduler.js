@@ -7,10 +7,11 @@ let timer = null;
 
 async function tick() {
   try {
-    const result = await distribution.runOnce();
-    if (result.ran || (result.reason && result.reason !== 'not_due' && result.reason !== 'locked')) {
-      console.log('[scheduler]', JSON.stringify(result));
-    }
+    const results = await distribution.runCycle();
+    const notable = results.filter(
+      (r) => r.ran || (r.reason && r.reason !== 'not_due' && r.reason !== 'locked')
+    );
+    if (notable.length) console.log('[scheduler]', JSON.stringify(notable));
   } catch (err) {
     console.error('[scheduler] error:', err.message);
   }
@@ -18,13 +19,12 @@ async function tick() {
 
 function start() {
   if (timer) return;
+  const intervalMs = config.isBitcoin ? config.schedulerTickMs : config.payoutIntervalMs;
   console.log(
-    `[scheduler] tick=${config.schedulerTickMs}ms interval=${config.distributionIntervalMs}ms network=${config.network}`
+    `[scheduler] tick=${intervalMs}ms rail=${config.paymentRail} mode=${config.platformMode}` +
+      (config.isBitcoin ? ` cycle=${config.distributionIntervalMs}ms` : '')
   );
-  // Tracking is done by comparing system time to the stored last-distribution
-  // timestamp on every tick — the tick frequency is just how often we check,
-  // independent of the (longer) payout interval.
-  timer = setInterval(tick, config.schedulerTickMs);
+  timer = setInterval(tick, intervalMs);
   timer.unref?.();
 }
 

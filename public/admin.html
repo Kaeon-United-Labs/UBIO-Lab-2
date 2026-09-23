@@ -21,34 +21,41 @@
     <!-- Login -->
     <section class="block" id="login-view" style="border-top:none">
       <h2>Sign in</h2>
-      <p class="sub">Enter the administrator password.</p>
+      <p class="sub" id="login-sub">Enter the administrator password.</p>
       <div id="login-notice"></div>
-      <div class="field">
-        <label for="password">Password</label>
-        <input id="password" type="password" autocomplete="current-password" />
+      <div class="field-row">
+        <div class="field" id="slug-field" hidden>
+          <label for="slug">Group address</label>
+          <input id="slug" type="text" class="mono" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" />
+        </div>
       </div>
       <button class="btn-primary" id="login-btn" type="button">Sign in</button>
     </section>
 
     <!-- Dashboard -->
     <div id="dash-view" class="admin-grid" style="display:none; padding: 32px 0;">
-      <section>
+      <section id="applications-section">
         <h2>Pending applications</h2>
         <p class="sub">Approve only after you've verified the person's identity.</p>
         <div id="applications"></div>
       </section>
 
       <section>
-        <h2>Current payees</h2>
+        <h2 id="recipients-heading">Current payees</h2>
         <div class="toolbar">
-          <button class="btn-ghost" id="add-payee-toggle" type="button">+ Add payee directly</button>
+          <button class="btn-ghost" id="add-payee-toggle" type="button">+ Add directly</button>
           <button class="btn-primary" id="distribute" type="button">Distribute now</button>
         </div>
         <div id="add-payee-form" style="display:none; margin: 8px 0 16px;">
-          <div class="field"><label>Full name</label><input id="ap-name" type="text" /></div>
+          <div class="field" id="ap-name-field"><label>Full name</label><input id="ap-name" type="text" /></div>
           <div class="field"><label>Email</label><input id="ap-email" type="email" /></div>
-          <div class="field"><label>BTC address</label><input id="ap-addr" class="mono" type="text" /></div>
-          <button class="btn-primary" id="ap-save" type="button">Save payee</button>
+          <div class="field" id="ap-phone-field" hidden><label>Phone</label><input id="ap-phone" type="tel" /></div>
+          <div class="field" id="ap-addr-field" hidden><label>BTC address</label><input id="ap-addr" class="mono" type="text" /></div>
+          <button class="btn-primary" id="ap-save" type="button">Save</button>
         </div>
         <div id="dash-notice"></div>
         <div id="payees"></div>

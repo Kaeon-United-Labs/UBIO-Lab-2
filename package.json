@@ -1,7 +1,7 @@
 {
-  "name": "ubio",
+  "name": "ubio-neo",
   "version": "0.1.0",
-  "description": "A web service template for an institution to run a grassroots UBI program over Bitcoin.",
+  "description": "UBIO: one codebase, configurable via env vars, for USD (Stripe or PayPal) or Bitcoin donations, as a federated multi-group platform or a single-institution install.",
   "license": "MIT",
   "main": "src/index.js",
   "engines": {
@@ -9,15 +9,18 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "test": "node test/distribution-math.test.js"
+    "test": "node test/run.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "bitcoinjs-lib": "^6.1.5",
     "dotenv": "^16.4.5",
     "ecpair": "^2.1.0",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
+    "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.8.0",
+    "stripe": "^16.2.0",
     "tiny-secp256k1": "^2.2.3"
   }
 }
